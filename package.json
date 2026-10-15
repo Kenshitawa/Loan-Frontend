@@ -1,0 +1,1 @@
+{"name":"mwangazabiz-ui","private":true,"version":"1.0.0","type":"module","scripts":{"dev":"vite --host 0.0.0.0","build":"vite build"},"dependencies":{"@vitejs/plugin-react":"6.1.2","vite":"8.3.4","typescript":"7.0.2","react":"19.3.0","react-dom":"19.3.0","lucide-react":"1.57.0"},"devDependencies":{},"packageManager":"pnpm@11.25.0"}
