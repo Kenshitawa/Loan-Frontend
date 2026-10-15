@@ -62,3 +62,53 @@
   .mobile-nav-links .mobile-nav-item{padding-right:9px;padding-left:9px;font-size:10px}
   .content{padding-right:12px;padding-left:12px}
 }
+
+/* Shared display controls and team onboarding. */
+.theme-toggle{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:7px 10px;border:1px solid #e1e7e2;border-radius:8px;background:#fff;color:#536159;font-size:10px;font-weight:600;white-space:nowrap}
+.theme-toggle:hover{background:#f4f8f4;color:#20583e}
+.team-note{display:flex;align-items:flex-start;gap:11px;margin:-4px 0 16px;padding:13px 15px;border:1px solid #dfeae1;border-radius:10px;background:#f2f7f3;color:#286342}
+.team-note>svg{flex:none;margin-top:1px}
+.team-note b,.team-note span{display:block}
+.team-note b{font-size:11px;margin-bottom:4px}
+.team-note span{font-size:10px;line-height:1.5;color:#64766a}
+
+/* Dark theme covers shared app surfaces, records, forms, and profile panels. */
+html[data-theme="dark"]{color-scheme:dark;background:#101712;color:#e5eee7}
+html[data-theme="dark"] body{background:#101712;color:#e5eee7}
+html[data-theme="dark"] .shell,html[data-theme="dark"] .content{color:#e5eee7}
+html[data-theme="dark"] .sidebar,html[data-theme="dark"] .mobile-navigation,html[data-theme="dark"] .metric,html[data-theme="dark"] .panel,html[data-theme="dark"] .modal,html[data-theme="dark"] .login-card{background:#17221b;border-color:#2b3b30}
+html[data-theme="dark"] .content>header{border-color:#2b3b30}
+html[data-theme="dark"] .mobile-navigation{background:rgba(23,34,27,.96);box-shadow:0 5px 20px rgba(0,0,0,.22)}
+html[data-theme="dark"] .brand,html[data-theme="dark"] .mobile-brand{color:#e3eee5}
+html[data-theme="dark"] .brand small,html[data-theme="dark"] .mobile-brand small{color:#9bac9f}
+html[data-theme="dark"] .org,html[data-theme="dark"] .help,html[data-theme="dark"] .report-card,html[data-theme="dark"] .queue-banner,html[data-theme="dark"] .snapshot-note,html[data-theme="dark"] .form-hint,html[data-theme="dark"] .document-preview{background:#202f25;border-color:#34483a}
+html[data-theme="dark"] .org b,html[data-theme="dark"] .help b,html[data-theme="dark"] .panel-head h2,html[data-theme="dark"] .page-head h1,html[data-theme="dark"] .metric>b,html[data-theme="dark"] .profile-identity h2,html[data-theme="dark"] .detail-item b,html[data-theme="dark"] .interaction-title,html[data-theme="dark"] .snapshot-note b,html[data-theme="dark"] .compare-row b,html[data-theme="dark"] .report-card b{color:#e5eee7}
+html[data-theme="dark"] .org small,html[data-theme="dark"] .help small,html[data-theme="dark"] .crumb,html[data-theme="dark"] .date,html[data-theme="dark"] .page-head p,html[data-theme="dark"] .panel-head p,html[data-theme="dark"] .metric-top,html[data-theme="dark"] .metric>small,html[data-theme="dark"] .detail-item span,html[data-theme="dark"] .profile-identity p,html[data-theme="dark"] .profile-contact span,html[data-theme="dark"] .interaction-item small,html[data-theme="dark"] .snapshot-note span,html[data-theme="dark"] .snapshot-note small,html[data-theme="dark"] .report-card span,html[data-theme="dark"] .compare-row span,html[data-theme="dark"] .health-caption,html[data-theme="dark"] .health-detail{color:#a4b2a8}
+html[data-theme="dark"] nav button{color:#b5c2b8}
+html[data-theme="dark"] nav button.selected,html[data-theme="dark"] .mobile-nav-links .mobile-nav-item.selected{background:#263d2d;border-color:#365641;color:#c3ebcd}
+html[data-theme="dark"] .mobile-nav-links .mobile-nav-item{color:#b4c2b7}
+html[data-theme="dark"] .mobile-branch{background:#202f25;border-color:#34483a;color:#bfe1c7}
+html[data-theme="dark"] .theme-toggle,html[data-theme="dark"] .secondary,html[data-theme="dark"] .row-action,html[data-theme="dark"] .upload-button,html[data-theme="dark"] .select{background:#202e25;border-color:#3a4a3e;color:#d4e0d7}
+html[data-theme="dark"] .theme-toggle:hover,html[data-theme="dark"] .secondary:hover,html[data-theme="dark"] .upload-button:hover{background:#2a3a30;color:#dff3e4}
+html[data-theme="dark"] .team-note{background:#202f25;border-color:#34483a;color:#bfe1c7}
+html[data-theme="dark"] .team-note span{color:#a9baad}
+html[data-theme="dark"] .profile,html[data-theme="dark"] .activity-history,html[data-theme="dark"] .detail-item,html[data-theme="dark"] .interaction-item,html[data-theme="dark"] .action,html[data-theme="dark"] th,html[data-theme="dark"] td{border-color:#2b3b30}
+html[data-theme="dark"] .profile b,html[data-theme="dark"] .person b,html[data-theme="dark"] .interaction-item p,html[data-theme="dark"] .profile-contact,html[data-theme="dark"] td{color:#d0ddd3}
+html[data-theme="dark"] .profile small,html[data-theme="dark"] .person small,html[data-theme="dark"] th,html[data-theme="dark"] .empty,html[data-theme="dark"] .payment-note,html[data-theme="dark"] .history-row small{color:#9cacA2}
+html[data-theme="dark"] .table-wrap{border-color:#2b3b30}
+html[data-theme="dark"] .search{background:#111a14;border-color:#34483a;color:#a7b4aa}
+html[data-theme="dark"] .search input,html[data-theme="dark"] input,html[data-theme="dark"] select,html[data-theme="dark"] textarea{background:#111a14;border-color:#3a4a3e;color:#e5eee7}
+html[data-theme="dark"] input::placeholder,html[data-theme="dark"] textarea::placeholder{color:#839188}
+html[data-theme="dark"] select option{background:#17221b;color:#e5eee7}
+html[data-theme="dark"] .login{background:#101712}
+html[data-theme="dark"] .login-card h1{color:#e5eee7}
+html[data-theme="dark"] .login-card p,html[data-theme="dark"] .login-card label,html[data-theme="dark"] .login-card>small{color:#a4b2a8}
+html[data-theme="dark"] .success-pill{background:#244331;color:#bce6c7}
+html[data-theme="dark"] .danger-pill{background:#492b29;color:#f0b4aa}
+html[data-theme="dark"] .pill{background:#403821;color:#ead28e}
+html[data-theme="dark"] .notice{background:#402820;color:#ffd0b7}
+html[data-theme="dark"] .action-button{background:#17221b;color:#d6e2d9}
+html[data-theme="dark"] .action-button:hover{background:#202f25}
+html[data-theme="dark"] .gridlines i,html[data-theme="dark"] .compare-track,html[data-theme="dark"] .health-rule{border-color:#34483a;background-color:#26352b}
+html[data-theme="dark"] .profile-initial,html[data-theme="dark"] .document-preview,html[data-theme="dark"] .interaction-icon,html[data-theme="dark"] .queue-icon{background:#263d2d;color:#bfe1c7}
+@media(max-width:760px){.theme-toggle{min-width:34px;width:34px;height:34px;padding:8px}.theme-toggle span{display:none}.head-right{gap:8px}}
