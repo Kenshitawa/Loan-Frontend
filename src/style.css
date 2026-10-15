@@ -160,3 +160,31 @@ html[data-theme="dark"] th{background:#19251d}
 html[data-theme="dark"] tbody tr:hover{background:#1b2a20}
 html[data-theme="dark"] .table-wrap{border-color:#2b3b30}
 html[data-theme="dark"] .mobile-navigation{border-bottom-color:#2b3b30}
+
+/* Keep sign-in as its own focused experience, separate from workspace styling. */
+.login{height:auto;min-height:100vh;min-height:100svh;grid-template-columns:minmax(0,1fr) minmax(0,1fr);background:#f5f8f5}
+.login-card{width:min(450px,calc(100% - 48px));padding:clamp(28px,4vw,48px);border:1px solid #e6ece7;border-radius:22px;background:#fff;box-shadow:0 18px 56px rgba(26,57,37,.09)}
+.login-card .brand-mark{width:48px;height:48px;border-radius:15px;background:linear-gradient(145deg,#26734d,#174c38);box-shadow:0 8px 18px rgba(23,76,56,.2)}
+.login-card .eyebrow{display:block;color:#46805b;font-size:10px;letter-spacing:1.6px}
+.login-card h1{font-size:clamp(27px,3vw,34px);line-height:1.17;letter-spacing:-1.2px;margin:10px 0 9px}
+.login-card p{font-size:13px;line-height:1.6;margin-bottom:27px}
+.login-card form{gap:18px}
+.login-card label{font-size:11px;gap:8px}
+.login-card input{min-height:46px;padding:12px 13px;border-radius:10px;font-size:13px}
+.login-card .wide{min-height:46px;margin-top:3px;font-size:13px}
+.login-art{min-height:100vh;min-height:100svh;background:radial-gradient(circle at 74% 25%,#c7d6a7 0%,transparent 20%),linear-gradient(150deg,#9bbd94 0%,#477c58 51%,#174c38 100%)}
+.art-copy{max-width:490px;margin-bottom:15%;text-shadow:0 2px 20px rgba(16,55,35,.15)}
+.art-copy span{font-size:10px;letter-spacing:2.2px}
+.art-copy h2{font-size:clamp(38px,4vw,54px);line-height:1.08;letter-spacing:-1.8px}
+.art-copy p{font-size:14px;line-height:1.6;max-width:360px}
+html[data-theme="dark"] .login{background:#101712}
+html[data-theme="dark"] .login-card{background:#17221b;border-color:#2b3b30;box-shadow:0 18px 56px rgba(0,0,0,.25)}
+html[data-theme="dark"] .login-card input{background:#111a14;border-color:#3a4a3e;color:#e5eee7}
+html[data-theme="dark"] .login-card label{color:#c4d0c7}
+html[data-theme="dark"] .login-card .eyebrow{color:#92c8a1}
+@media(max-width:760px){
+  .login{min-height:100vh;min-height:100svh;grid-template-columns:minmax(0,1fr);padding:20px 14px}
+  .login-card{width:min(440px,100%);padding:28px 24px;border-radius:20px}
+  .login-art{display:none}
+}
+@media(max-width:390px){.login{padding:14px 10px}.login-card{padding:25px 20px}}
