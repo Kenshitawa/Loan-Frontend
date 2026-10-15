@@ -4,7 +4,7 @@ import {
   Activity, ArrowDownRight, ArrowUpRight, Bell, BriefcaseBusiness, CalendarDays,
   ChartNoAxesCombined, Check, ChevronDown, CircleDollarSign, ClipboardList,
   Download, HandCoins, LayoutDashboard, LogOut, MapPin, MoreHorizontal, PhoneCall,
-  Moon, Plus, Search, ShieldCheck, Sun, Users, WalletCards, X
+  Monitor, Moon, Plus, Search, ShieldCheck, Sun, Users, WalletCards, X
 } from 'lucide-react';
 import './style.css';
 
@@ -16,6 +16,7 @@ const nav = [
 ];
 const KES = cents => `KES ${(Number(cents || 0) / 100).toLocaleString('en-KE', { maximumFractionDigits: 0 })}`;
 const titleCase = text => (text || '').replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 
 async function api(path, token, options = {}) {
   const isForm = typeof FormData !== 'undefined' && options.body instanceof FormData;
@@ -29,7 +30,8 @@ async function api(path, token, options = {}) {
 function App() {
   const [token, setToken] = useState('');
   const [user, setUser] = useState(null);
-  const [theme, setTheme] = useState('light');
+  const [theme, setTheme] = useState('system');
+  const [systemTheme, setSystemTheme] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ? 'dark' : 'light');
   const [page, setPage] = useState('Overview');
   const [data, setData] = useState(null);
   const [products, setProducts] = useState([]);
@@ -64,10 +66,52 @@ function App() {
     api('/auth/me', token).then(setUser).catch(() => { localStorage.removeItem('token'); setToken(''); setUser(null); });
   }, [token]);
   useEffect(() => {
-    const savedTheme = user?.id ? localStorage.getItem(`mwangazabiz-theme-${user.id}`) || 'light' : 'light';
-    setTheme(savedTheme);
-    document.documentElement.dataset.theme = savedTheme;
+    const media = window.matchMedia?.('(prefers-color-scheme: dark)');
+    if (!media) return;
+    const update = event => setSystemTheme(event.matches ? 'dark' : 'light');
+    setSystemTheme(media.matches ? 'dark' : 'light');
+    media.addEventListener?.('change', update);
+    return () => media.removeEventListener?.('change', update);
+  }, []);
+  useEffect(() => {
+    const savedTheme = user?.id ? localStorage.getItem(`mwangazabiz-theme-${user.id}`) || 'system' : 'system';
+    setTheme(['system', 'light', 'dark'].includes(savedTheme) ? savedTheme : 'system');
   }, [user?.id]);
+  useEffect(() => {
+    const effectiveTheme = theme === 'system' ? systemTheme : theme;
+    document.documentElement.dataset.theme = effectiveTheme;
+    document.documentElement.style.colorScheme = effectiveTheme;
+  }, [theme, systemTheme]);
+  useEffect(() => {
+    if (!token) return;
+    let lastActivity = Date.now();
+    let timer;
+    const expire = () => {
+      localStorage.removeItem('token');
+      setToken(''); setUser(null); setData(null); setPage('Overview');
+      setError('You were signed out after 15 minutes of inactivity. Please sign in again.');
+    };
+    const schedule = () => {
+      clearTimeout(timer);
+      const remaining = IDLE_TIMEOUT_MS - (Date.now() - lastActivity);
+      timer = window.setTimeout(expire, Math.max(0, remaining));
+    };
+    const activity = () => {
+      if (Date.now() - lastActivity >= IDLE_TIMEOUT_MS) { expire(); return; }
+      lastActivity = Date.now();
+      schedule();
+    };
+    const events = ['pointerdown', 'keydown', 'touchstart', 'scroll', 'wheel', 'mousemove'];
+    events.forEach(name => window.addEventListener(name, activity, { passive: true }));
+    const checkVisibility = () => { if (document.visibilityState === 'visible' && Date.now() - lastActivity >= IDLE_TIMEOUT_MS) expire(); };
+    document.addEventListener('visibilitychange', checkVisibility);
+    schedule();
+    return () => {
+      clearTimeout(timer);
+      events.forEach(name => window.removeEventListener(name, activity));
+      document.removeEventListener('visibilitychange', checkVisibility);
+    };
+  }, [token]);
   useEffect(() => {
     const expireRestoredPage = event => { if (event.persisted) { setToken(''); setUser(null); setData(null); } };
     window.addEventListener('pageshow', expireRestoredPage);
@@ -167,9 +211,8 @@ function App() {
   }
   function logout() { localStorage.removeItem('token'); setToken(''); setUser(null); setData(null); setPage('Overview'); }
   function toggleTheme() {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    const nextTheme = theme === 'system' ? 'dark' : theme === 'dark' ? 'light' : 'system';
     setTheme(nextTheme);
-    document.documentElement.dataset.theme = nextTheme;
     if (user?.id) localStorage.setItem(`mwangazabiz-theme-${user.id}`, nextTheme);
   }
   function navigateTo(target) { setSearch(''); setSelectedCustomer(null); setPage(target); }
@@ -181,7 +224,8 @@ function App() {
   const visibleNav = nav.filter(([name]) => name !== 'Team' || canManageTeam);
   const isNavActive = name => page === name || (page === 'Customer profile' && name === 'Customers');
   const actionName = { Customers: 'customer', Products: 'product', Loans: 'loan', Repayments: 'repayment', Team: 'team member' }[page];
-  const ThemeIcon = theme === 'dark' ? Sun : Moon;
+  const ThemeIcon = theme === 'system' ? Monitor : theme === 'dark' ? Moon : Sun;
+  const themeLabel = theme === 'system' ? 'Auto' : theme === 'dark' ? 'Dark' : 'Light';
   return <div className="shell">
     <div className="mobile-navigation">
       <div className="mobile-nav-top">
@@ -205,7 +249,7 @@ function App() {
       </div>
     </aside>
     <main className="content">
-      <header><div className="crumb">Workspace <span>/</span> {page}</div><div className="head-right"><span className="date"><CalendarDays size={15}/>{new Date().toLocaleDateString('en-KE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span><button type="button" className="theme-toggle" onClick={toggleTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`} aria-pressed={theme === 'dark'} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}><ThemeIcon size={16}/><span>{theme === 'dark' ? 'Light' : 'Dark'} mode</span></button><div className="avatar small">{user.username.slice(0, 1).toUpperCase()}</div></div></header>
+      <header><div className="crumb">Workspace <span>/</span> {page}</div><div className="head-right"><span className="date"><CalendarDays size={15}/>{new Date().toLocaleDateString('en-KE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span><button type="button" className="theme-toggle" onClick={toggleTheme} aria-label={`Theme: ${themeLabel}. Click to change.`} aria-pressed={theme === 'dark'} title={`Theme: ${themeLabel}. Click to change.`}><ThemeIcon size={16}/><span>{themeLabel}</span></button><div className="avatar small">{user.username.slice(0, 1).toUpperCase()}</div></div></header>
       <section className="page-head"><div><span className="eyebrow">{titleCase(user.role)} WORKSPACE</span><h1>{page === 'Overview' ? `Welcome back, ${user.username}` : page === 'Customer profile' ? (data?.customer?.full_name || 'Customer profile') : page}<span className="wave"> ✦</span></h1><p>{pageDescription(page, user.role)}</p></div>
         <div className="head-actions">{page === 'Customer profile' && <><button className="secondary" onClick={() => { setSelectedCustomer(null); setPage('Customers'); }}>Back to customers</button>{['admin','manager','branch_manager','loan_officer','collections_officer','accountant'].includes(user.role)&&<button className="primary" onClick={()=>setModal('Interaction')}><Plus size={17}/> Add interaction</button>}</>}{['Customers','Products','Loans','Repayments','Team'].includes(page) && canCreate(page, user.role) && <button className="primary" onClick={() => setModal(page)}><Plus size={17}/> New {actionName}</button>}{['Reports','Loans','Customers','Repayments'].includes(page) && <button className="secondary" onClick={exportLoans}><Download size={16}/> Export CSV</button>}</div>
       </section>

@@ -112,3 +112,51 @@ html[data-theme="dark"] .action-button:hover{background:#202f25}
 html[data-theme="dark"] .gridlines i,html[data-theme="dark"] .compare-track,html[data-theme="dark"] .health-rule{border-color:#34483a;background-color:#26352b}
 html[data-theme="dark"] .profile-initial,html[data-theme="dark"] .document-preview,html[data-theme="dark"] .interaction-icon,html[data-theme="dark"] .queue-icon{background:#263d2d;color:#bfe1c7}
 @media(max-width:760px){.theme-toggle{min-width:34px;width:34px;height:34px;padding:8px}.theme-toggle span{display:none}.head-right{gap:8px}}
+
+/* Modern workspace finish: clearer hierarchy, calmer surfaces, and stronger touch targets. */
+:root{font-family:'DM Sans',sans-serif;background:#f4f7f4;color:#1d2b22;font-optical-sizing:auto}
+body{min-height:100vh;background:#f4f7f4}
+.sidebar{width:266px;padding:27px 17px 16px;background:linear-gradient(180deg,#fff 0%,#fbfdfb 100%)}
+.content{max-width:1720px;padding-right:clamp(24px,4vw,64px);padding-left:clamp(24px,4vw,64px)}
+.content>header{background:rgba(244,247,244,.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.page-head{margin-bottom:28px}.page-head h1{font-size:clamp(25px,2.3vw,34px);letter-spacing:-1.1px}.page-head p,.panel-head p{font-size:12px;line-height:1.55}
+.eyebrow{font-size:10px;letter-spacing:1.5px}
+.metric,.panel{border-radius:16px;border-color:#e7ece7;box-shadow:0 4px 18px rgba(25,55,35,.035)}
+.metric{padding:19px}.panel{padding:20px}
+.metric:hover,.panel:hover{box-shadow:0 12px 30px rgba(25,55,35,.075)}
+.primary,.secondary,.theme-toggle,.row-action,.upload-button{min-height:40px;border-radius:10px;transition:transform .16s ease,background .16s ease,border-color .16s ease,box-shadow .16s ease}
+.primary{background:linear-gradient(135deg,#1c6945,#174c38);box-shadow:0 4px 10px rgba(23,76,56,.14)}
+.primary:hover{transform:translateY(-1px);box-shadow:0 7px 16px rgba(23,76,56,.2)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid rgba(62,139,91,.35);outline-offset:2px}
+.table-wrap{border:1px solid #edf1ed;border-radius:12px;scrollbar-color:#c6d2c8 transparent;scrollbar-width:thin}
+th{background:#f8faf8;position:sticky;top:0;z-index:1}
+td,th{padding:12px 11px}
+tbody tr:hover{background:#f8fbf8}
+.modal{border-radius:18px;padding:26px;box-shadow:0 24px 80px rgba(10,30,18,.25)}
+.modal-fields label{font-size:11px;gap:7px}.modal-fields input,.modal-fields select,.modal-fields textarea{min-height:42px;border-radius:9px;font-size:12px;padding:10px 12px}
+.notice{border-radius:12px}
+@media(max-width:760px){
+  body{background:#f4f7f4}
+  .mobile-navigation{box-shadow:0 8px 24px rgba(28,57,39,.08);border-bottom-color:#e3eae4}
+  .mobile-nav-top{min-height:66px;padding-right:15px;padding-left:15px}
+  .mobile-nav-links{padding:3px 13px 11px;gap:7px}
+  .mobile-nav-links .mobile-nav-item{min-height:42px;padding-right:13px;padding-left:13px;border-radius:12px;font-size:11px}
+  .content{padding:0 16px calc(28px + env(safe-area-inset-bottom))}
+  .content>header{height:52px;margin-bottom:20px}
+  .page-head{margin-bottom:20px}
+  .page-head h1{font-size:24px;line-height:1.2}
+  .stats{gap:11px}
+  .metric{padding:15px;border-radius:14px}
+  .panel{padding:16px;border-radius:14px}
+  .table-wrap{border-radius:10px}
+  .theme-toggle{box-shadow:0 2px 8px rgba(20,50,30,.06)}
+}
+@media(max-width:390px){.mobile-branch{max-width:124px;overflow:hidden}.mobile-branch span{text-overflow:ellipsis;overflow:hidden}.content{padding-right:12px;padding-left:12px}.stats{gap:8px}.metric{padding:12px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
+html[data-theme="dark"] body{background:#101712}
+html[data-theme="dark"] .content>header{background:rgba(16,23,18,.88)}
+html[data-theme="dark"] .sidebar{background:linear-gradient(180deg,#17221b,#141e17)}
+html[data-theme="dark"] th{background:#19251d}
+html[data-theme="dark"] tbody tr:hover{background:#1b2a20}
+html[data-theme="dark"] .table-wrap{border-color:#2b3b30}
+html[data-theme="dark"] .mobile-navigation{border-bottom-color:#2b3b30}
