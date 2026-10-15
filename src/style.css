@@ -188,3 +188,8 @@ html[data-theme="dark"] .login-card .eyebrow{color:#92c8a1}
   .login-art{display:none}
 }
 @media(max-width:390px){.login{padding:14px 10px}.login-card{padding:25px 20px}}
+.remove-member{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:7px 10px;border:1px solid #f0d9d6;border-radius:9px;background:#fff8f7;color:#a4473d;font-size:10px;font-weight:600;white-space:nowrap;transition:background .15s,border-color .15s,opacity .15s}
+.remove-member:hover:not(:disabled){background:#fdecea;border-color:#e8b9b3}
+.remove-member:disabled{opacity:.5;cursor:not-allowed}
+html[data-theme="dark"] .remove-member{background:#332321;border-color:#57332f;color:#f0ada4}
+html[data-theme="dark"] .remove-member:hover:not(:disabled){background:#432a27;border-color:#70403a}

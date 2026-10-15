@@ -4,7 +4,7 @@ import {
   Activity, ArrowDownRight, ArrowUpRight, Bell, BriefcaseBusiness, CalendarDays,
   ChartNoAxesCombined, Check, ChevronDown, CircleDollarSign, ClipboardList,
   Download, HandCoins, LayoutDashboard, LogOut, MapPin, MoreHorizontal, PhoneCall,
-  Monitor, Moon, Plus, Search, ShieldCheck, Sun, Users, WalletCards, X
+  Monitor, Moon, Plus, Search, ShieldCheck, Sun, Trash2, Users, WalletCards, X
 } from 'lucide-react';
 import './style.css';
 
@@ -205,6 +205,14 @@ function App() {
     try { await api(`/collections/${loanId}/assign`, token, { method: 'POST', body: JSON.stringify({ collector_id: Number(collectorId) }) }); await loadPage(page, search); }
     catch (e) { setError(e.message); }
   }
+  async function removeTeamMember(member) {
+    if (!isAdmin || member.id === user.id || !member.active) return;
+    if (!window.confirm(`Remove ${member.username}'s access? They will no longer be able to sign in. Their loan and audit history will be preserved.`)) return;
+    try {
+      await api(`/users/${member.id}`, token, { method: 'DELETE' });
+      await loadPage('Team', search);
+    } catch (e) { setError(e.message); }
+  }
   async function openActivity(loanId) {
     setSelectedLoan(loanId); setModal('Activity'); setActivities([]);
     try { setActivities(await api(`/collections/${loanId}/activities`, token)); } catch (e) { setError(e.message); }
@@ -267,7 +275,7 @@ function App() {
         {page === 'Repayments' && <PaymentTable rows={rows} canReview={['admin','manager','branch_manager'].includes(user.role)} reviewerId={user.id} canReverse={['admin','manager','branch_manager','accountant'].includes(user.role)} onReview={reviewPayment} onReverse={id => { setSelectedLoan(id); setModal('Reversal'); }}/ >}
         {page === 'Collections' && <CollectionTable rows={Array.isArray(data) ? data : []} officers={officers} user={user} onAssign={assignCollector} onActivity={openActivity}/ >}
         {page === 'Reports' && <Reports summary={summary}/>}
-        {page === 'Team' && <TeamTable rows={Array.isArray(data) ? data : []}/>}
+        {page === 'Team' && <TeamTable rows={Array.isArray(data) ? data : []} canDelete={isAdmin} currentUserId={user.id} onDelete={removeTeamMember}/>}
       </section>}
     </main>
     {modal && <RecordModal type={modal} isAdmin={isAdmin} products={products} customers={customers} loans={loanChoices} officers={officers} activities={modal==='Interaction'?(data?.interactions||[]):activities} selectedLoan={selectedLoan} onClose={() => { setModal(''); setSelectedLoan(null); }} onSubmit={submitModal}/>}
@@ -340,7 +348,7 @@ function ProductTable({rows}) { return <div className="table-wrap"><table><thead
 function PaymentTable({rows,onReverse,canReverse,canReview,reviewerId,onReview}) { return <div className="table-wrap"><table><thead><tr><th>Loan</th><th>Amount</th><th>Method</th><th>Reference</th><th>Received</th><th>Review status</th><th>Actions</th></tr></thead><tbody>{rows.length?rows.map(p=><tr key={p.id}><td>MW-{String(p.loan_id).padStart(5,'0')}</td><td>{KES(p.amount_cents)}</td><td>{titleCase(p.method)}</td><td>{p.reference||'—'}</td><td>{new Date(p.created_at).toLocaleDateString('en-KE')}</td><td><span className={`pill ${p.reversed?'danger-pill':p.status==='confirmed'?'success-pill':p.status==='rejected'?'danger-pill':'pending'}`}>{p.reversed?'Reversed':titleCase(p.status||'confirmed')}</span>{p.status==='pending'&&canReview&&p.created_by===reviewerId&&<small className="payment-note">Awaiting another manager</small>}{p.review_note&&<small className="payment-note">{p.review_note}</small>}</td><td className="payment-actions">{canReview&&p.status==='pending'&&p.created_by!==reviewerId&&<><button className="row-text-action" onClick={()=>onReview(p.id,'confirmed')}>Confirm</button><button className="row-text-action reject-action" onClick={()=>onReview(p.id,'rejected')}>Reject</button></>}{canReverse&&!p.reversed&&p.status==='confirmed'&&<button className="row-text-action" onClick={()=>onReverse(p.id)}>Reverse</button>}</td></tr>):<Empty colSpan={7} text="No repayments recorded yet."/>}</tbody></table></div>; }
 
 function CollectionTable({rows,officers,user,onAssign,onActivity}) { return <div className="table-wrap"><table><thead><tr><th>Customer</th><th>Loan</th><th>Due date</th><th>Days late</th><th>Ageing</th><th>Amount due</th><th>Assigned officer</th><th>Action</th></tr></thead><tbody>{rows.length?rows.map((r,i)=><tr key={`${r.loan_id}-${r.due_date}-${i}`}><td><b>{r.customer_name}</b></td><td>MW-{String(r.loan_id).padStart(5,'0')}</td><td>{r.due_date}</td><td>{r.days_past_due}</td><td><span className="pill danger-pill">{r.bucket}</span></td><td>{KES(r.amount_due_cents)}</td><td>{['admin','branch_manager'].includes(user.role)?<select className="row-action assign-select" value={r.collector_id||''} onChange={e=>onAssign(r.loan_id,e.target.value)}><option value="">Unassigned</option>{officers.map(o=><option key={o.id} value={o.id}>{o.username}</option>)}</select>:(r.collector_name||'Unassigned')}</td><td><button className="row-text-action" onClick={()=>onActivity(r.loan_id)}>Log contact</button></td></tr>):<Empty colSpan={8} text="No overdue installments in the queue."/>}</tbody></table></div>; }
-function TeamTable({rows}) { return <div className="table-wrap"><table><thead><tr><th>Officer</th><th>Role</th><th>Branch</th><th>Account</th><th>Password setup</th><th>Added</th></tr></thead><tbody>{rows.length?rows.map((u,i)=><tr key={u.id}><td><div className="person"><div className={`avatar hue${i%4}`}>{u.username.slice(0,1).toUpperCase()}</div><b>{u.username}</b></div></td><td><span className="role-label">{titleCase(u.role)}</span></td><td>Nanyuki</td><td><span className={`pill ${u.active?'success-pill':'danger-pill'}`}>{u.active?'Active':'Disabled'}</span></td><td><span className={`pill ${u.must_change_password?'pending':'success-pill'}`}>{u.must_change_password?'Change required':'Complete'}</span></td><td>{u.created_at ? new Date(u.created_at).toLocaleDateString('en-KE') : '—'}</td></tr>):<Empty colSpan={6} text="No team members found."/>}</tbody></table></div>; }
+function TeamTable({rows,canDelete,currentUserId,onDelete}) { return <div className="table-wrap"><table><thead><tr><th>Officer</th><th>Role</th><th>Branch</th><th>Account</th><th>Password setup</th><th>Added</th>{canDelete&&<th>Actions</th>}</tr></thead><tbody>{rows.length?rows.map((u,i)=><tr key={u.id}><td><div className="person"><div className={`avatar hue${i%4}`}>{u.username.slice(0,1).toUpperCase()}</div><b>{u.username}</b></div></td><td><span className="role-label">{titleCase(u.role)}</span></td><td>Nanyuki</td><td><span className={`pill ${u.active?'success-pill':'danger-pill'}`}>{u.active?'Active':'Disabled'}</span></td><td><span className={`pill ${u.must_change_password?'pending':'success-pill'}`}>{u.must_change_password?'Change required':'Complete'}</span></td><td>{u.created_at ? new Date(u.created_at).toLocaleDateString('en-KE') : '—'}</td>{canDelete&&<td><button type="button" className="remove-member" onClick={()=>onDelete(u)} disabled={!u.active||u.id===currentUserId} title={u.id===currentUserId?'You cannot remove your own account':u.active?'Remove access':'Account already disabled'} aria-label={u.active?`Remove ${u.username} access`:`${u.username} account already disabled`}><Trash2 size={15}/><span>{u.active?'Remove':'Removed'}</span></button></td>}</tr>):<Empty colSpan={canDelete?7:6} text="No team members found."/>}</tbody></table></div>; }
 function Reports({summary}) { const cards=[['Portfolio outstanding',summary.portfolio_outstanding_cents],['Total disbursed',summary.disbursed_cents],['Total collected',summary.collected_cents],['Portfolio at risk',summary.par_cents]]; return <div className="report-cards">{cards.map(([label,value])=><div className="report-card" key={label}><span>{label}</span><b>{KES(value)}</b></div>)}</div>; }
 function Empty({colSpan,text}) { return <tr><td colSpan={colSpan} className="empty">{text}</td></tr>; }
 
