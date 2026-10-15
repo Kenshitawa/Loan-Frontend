@@ -8,6 +8,8 @@ This repository contains the React/Vite website only. The FastAPI backend is in 
 2. Add the environment variable `VITE_API_URL` with the backend's full HTTPS API address, ending in `/api/v1` (for example, `https://api.example.com/api/v1`).
 3. Deploy. `vercel.json` already configures the Vite build and page refresh routing.
 
+For a Render backend, use its service URL with `/api/v1` at the end for `VITE_API_URL`. Also set the Render backend's `CORS_ORIGINS` to this site's exact Vercel URL (no trailing slash), then redeploy the backend.
+
 The website's `VITE_API_URL` is public browser configuration. Never put passwords, database URLs, or secret keys in a `VITE_` variable.
 
 ## Local development
