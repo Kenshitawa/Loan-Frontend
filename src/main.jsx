@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import {
   Activity, ArrowDownRight, ArrowUpRight, Bell, BriefcaseBusiness, CalendarDays,
   ChartNoAxesCombined, Check, ChevronDown, CircleDollarSign, ClipboardList,
-  Download, HandCoins, LayoutDashboard, LogOut, Menu, MoreHorizontal, PhoneCall,
+  Download, HandCoins, LayoutDashboard, LogOut, MapPin, MoreHorizontal, PhoneCall,
   Plus, Search, ShieldCheck, Users, WalletCards, X
 } from 'lucide-react';
 import './style.css';
@@ -160,25 +160,39 @@ function App() {
     try { setActivities(await api(`/collections/${loanId}/activities`, token)); } catch (e) { setError(e.message); }
   }
   function logout() { localStorage.removeItem('token'); setToken(''); setUser(null); setData(null); setPage('Overview'); }
+  function navigateTo(target) { setSearch(''); setSelectedCustomer(null); setPage(target); }
 
   if (!user) return <Login onSubmit={signIn} loading={loading} error={error} />;
   if (user.must_change_password) return <PasswordChange username={user.username} error={error} onSubmit={changePassword}/>;
   const rows = data?.items || [];
   const summary = data || {};
   const visibleNav = nav.filter(([name]) => name !== 'Team' || canManageTeam);
+  const isNavActive = name => page === name || (page === 'Customer profile' && name === 'Customers');
   const actionName = { Customers: 'customer', Products: 'product', Loans: 'loan', Repayments: 'repayment', Team: 'officer' }[page];
   return <div className="shell">
+    <div className="mobile-navigation">
+      <div className="mobile-nav-top">
+        <div className="mobile-brand"><div className="brand-mark">M</div><div><b>MWANGAZABIz</b><small>LENDING WORKSPACE</small></div></div>
+        <div className="mobile-nav-actions">
+          <span className="mobile-branch"><MapPin size={14}/><span>Nanyuki Branch</span></span>
+          <button className="mobile-logout" onClick={logout} aria-label={`Log out ${user.username}`} title="Log out"><span className="avatar">{user.username.slice(0, 1).toUpperCase()}</span><LogOut size={15}/></button>
+        </div>
+      </div>
+      <nav className="mobile-nav-links" aria-label="Primary navigation">
+        {visibleNav.map(([name, Icon]) => <button key={name} className={`mobile-nav-item${isNavActive(name) ? ' selected' : ''}`} aria-current={isNavActive(name) ? 'page' : undefined} onClick={() => navigateTo(name)}><Icon size={16}/><span>{name}</span></button>)}
+      </nav>
+    </div>
     <aside className="sidebar">
       <div className="brand"><div className="brand-mark">M</div><div><b>MWANGAZABIz</b><small>LENDING WORKSPACE</small></div></div>
       <div className="org"><div className="org-icon">N</div><div><b>Nanyuki Branch</b><small>Organization workspace</small></div><ChevronDown size={15}/></div>
       <div className="nav-label">OPERATIONS</div>
-      <nav>{visibleNav.map(([name, Icon]) => <button key={name} className={page === name || (page === 'Customer profile' && name === 'Customers') ? 'selected' : ''} onClick={() => { setSearch(''); setSelectedCustomer(null); setPage(name); }}><Icon size={18}/>{name}</button>)}</nav>
+      <nav>{visibleNav.map(([name, Icon]) => <button key={name} className={isNavActive(name) ? 'selected' : ''} aria-current={isNavActive(name) ? 'page' : undefined} onClick={() => navigateTo(name)}><Icon size={18}/>{name}</button>)}</nav>
       <div className="side-bottom"><div className="help"><span className="help-dot">?</span><div><b>Need a hand?</b><small>Ask your administrator</small></div></div>
         <button className="profile" onClick={logout}><div className="avatar">{user.username.slice(0, 1).toUpperCase()}</div><div><b>{user.username}</b><small>{titleCase(user.role)}</small></div><LogOut size={16}/></button>
       </div>
     </aside>
     <main className="content">
-      <header><button className="mobile-menu"><Menu/></button><div className="crumb">Workspace <span>/</span> {page}</div><div className="head-right"><span className="date"><CalendarDays size={15}/>{new Date().toLocaleDateString('en-KE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span><div className="avatar small">{user.username.slice(0, 1).toUpperCase()}</div></div></header>
+      <header><div className="crumb">Workspace <span>/</span> {page}</div><div className="head-right"><span className="date"><CalendarDays size={15}/>{new Date().toLocaleDateString('en-KE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span><div className="avatar small">{user.username.slice(0, 1).toUpperCase()}</div></div></header>
       <section className="page-head"><div><span className="eyebrow">{titleCase(user.role)} WORKSPACE</span><h1>{page === 'Overview' ? `Welcome back, ${user.username}` : page === 'Customer profile' ? (data?.customer?.full_name || 'Customer profile') : page}<span className="wave"> ✦</span></h1><p>{pageDescription(page, user.role)}</p></div>
         <div className="head-actions">{page === 'Customer profile' && <><button className="secondary" onClick={() => { setSelectedCustomer(null); setPage('Customers'); }}>Back to customers</button>{['admin','manager','branch_manager','loan_officer','collections_officer','accountant'].includes(user.role)&&<button className="primary" onClick={()=>setModal('Interaction')}><Plus size={17}/> Add interaction</button>}</>}{['Customers','Products','Loans','Repayments','Team'].includes(page) && canCreate(page, user.role) && <button className="primary" onClick={() => setModal(page)}><Plus size={17}/> New {actionName}</button>}{['Reports','Loans','Customers','Repayments'].includes(page) && <button className="secondary" onClick={exportLoans}><Download size={16}/> Export CSV</button>}</div>
       </section>
