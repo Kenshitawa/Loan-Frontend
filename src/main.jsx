@@ -4,7 +4,7 @@ import {
   Activity, ArrowDownRight, ArrowUpRight, Bell, BriefcaseBusiness, CalendarDays,
   ChartNoAxesCombined, Check, ChevronDown, CircleDollarSign, ClipboardList,
   Download, HandCoins, LayoutDashboard, LogOut, MapPin, MoreHorizontal, PhoneCall,
-  Monitor, Moon, Plus, Search, ShieldCheck, Sun, Trash2, Users, WalletCards, X
+  Monitor, Moon, Plus, Search, Settings, ShieldCheck, Sun, Trash2, Users, WalletCards, X
 } from 'lucide-react';
 import './style.css';
 
@@ -12,7 +12,7 @@ const API = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://127.0
 const nav = [
   ['Overview', LayoutDashboard], ['Customers', Users], ['Products', BriefcaseBusiness],
   ['Loans', HandCoins], ['Repayments', WalletCards], ['Collections', PhoneCall],
-  ['Reports', ChartNoAxesCombined], ['Team', ShieldCheck]
+  ['Reports', ChartNoAxesCombined], ['Team', ShieldCheck], ['Account settings', Settings]
 ];
 const KES = cents => `KES ${(Number(cents || 0) / 100).toLocaleString('en-KE', { maximumFractionDigits: 0 })}`;
 const titleCase = text => (text || '').replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -54,7 +54,8 @@ function App() {
   const canManageTeam = ['admin', 'manager', 'branch_manager'].includes(user?.role);
 
   const loadPage = useCallback(async (target = page, query = '') => {
-    if (!token) return;
+    if (!token || !user) return;
+    if (target === 'Account settings') { setData(null); setError(''); return; }
     const routes = {
       Overview: '/reports/summary', Customers: `/customers?page=1&limit=500${query ? `&q=${encodeURIComponent(query)}` : ''}`,
       Products: '/products', Loans: '/loans?page=1&limit=100', Repayments: '/payments?page=1&limit=100',
@@ -63,12 +64,28 @@ function App() {
     };
     try { setError(''); setData(await api(routes[target] || routes.Overview, token)); }
     catch (e) { setError(e.message); }
-  }, [page, token, selectedCustomer]);
+  }, [page, token, selectedCustomer, user]);
 
   useEffect(() => {
     if (!token) return;
     api('/auth/me', token).then(setUser).catch(() => { localStorage.removeItem('token'); setToken(''); setUser(null); });
   }, [token]);
+  useEffect(() => {
+    if (!token || !user?.password_expires_at || user.must_change_password) return;
+    let timer;
+    let cancelled = false;
+    const checkPasswordAge = async () => {
+      const remaining = Date.parse(user.password_expires_at) - Date.now();
+      if (remaining > 0) {
+        timer = window.setTimeout(checkPasswordAge, Math.min(remaining, 24 * 60 * 60 * 1000));
+        return;
+      }
+      try { const current = await api('/auth/me', token); if (!cancelled) setUser(current); }
+      catch (e) { if (!cancelled) { setError(e.message); timer = window.setTimeout(checkPasswordAge, 60 * 1000); } }
+    };
+    timer = window.setTimeout(checkPasswordAge, Math.max(0, Math.min(Date.parse(user.password_expires_at) - Date.now(), 24 * 60 * 60 * 1000)));
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [token, user?.id, user?.password_expires_at, user?.must_change_password]);
   useEffect(() => {
     const media = window.matchMedia?.('(prefers-color-scheme: dark)');
     if (!media) return;
@@ -194,9 +211,9 @@ function App() {
     } catch (e) { setError(e.message); }
   }
   async function changePassword(event) {
-    event.preventDefault(); setError(''); const form = new FormData(event.currentTarget);
+    event.preventDefault(); setError(''); setSuccess(''); const formElement = event.currentTarget; const form = new FormData(formElement);
     if (form.get('new_password') !== form.get('confirm_password')) { setError('The new passwords do not match.'); return; }
-    try { await api('/auth/change-password', token, { method: 'POST', body: JSON.stringify({ old_password: form.get('old_password'), new_password: form.get('new_password') }) }); setUser(current => ({ ...current, must_change_password: false })); }
+    try { await api('/auth/change-password', token, { method: 'POST', body: JSON.stringify({ old_password: form.get('old_password'), new_password: form.get('new_password') }) }); setUser(current => ({ ...current, must_change_password: false, password_expired: false, password_changed_at: new Date().toISOString(), password_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() })); formElement.reset(); setSuccess('Password updated. Your next required change is in 30 days.'); }
     catch (e) { setError(e.message); }
   }
   async function uploadCustomerDocument(event, documentType) {
@@ -232,7 +249,7 @@ function App() {
   function navigateTo(target) { setSearch(''); setSelectedCustomer(null); setPage(target); }
 
   if (!user) return <Login onSubmit={signIn} loading={loading} error={error} theme={theme} onThemeChange={selectTheme} />;
-  if (user.must_change_password) return <PasswordChange username={user.username} error={error} onSubmit={changePassword} theme={theme} onThemeChange={selectTheme}/>;
+  if (user.must_change_password) return <PasswordChange username={user.username} expired={user.password_expired} error={error} onSubmit={changePassword} theme={theme} onThemeChange={selectTheme}/>;
   const rows = data?.items || [];
   const summary = data || {};
   const visibleNav = nav.filter(([name]) => name !== 'Team' || canManageTeam);
@@ -245,7 +262,7 @@ function App() {
         <div className="mobile-brand"><div className="brand-mark">M</div><div><b>MWANGAZABIz</b><small>LENDING WORKSPACE</small></div></div>
         <div className="mobile-nav-actions">
           <span className="mobile-branch"><MapPin size={14}/><span>Nanyuki Branch</span></span>
-          <button className="mobile-logout" onClick={logout} aria-label={`Log out ${user.username}`} title="Log out"><span className="avatar">{user.username.slice(0, 1).toUpperCase()}</span><LogOut size={15}/></button>
+          <button className="mobile-logout" onClick={() => navigateTo('Account settings')} aria-label={`Open account settings for ${user.username}`} title="Account settings"><span className="avatar">{user.username.slice(0, 1).toUpperCase()}</span><Settings size={15}/></button>
         </div>
       </div>
       <nav className="mobile-nav-links" aria-label="Primary navigation">
@@ -258,11 +275,11 @@ function App() {
       <div className="nav-label">OPERATIONS</div>
       <nav>{visibleNav.map(([name, Icon]) => <button key={name} className={isNavActive(name) ? 'selected' : ''} aria-current={isNavActive(name) ? 'page' : undefined} onClick={() => navigateTo(name)}><Icon size={18}/>{name}</button>)}</nav>
       <div className="side-bottom"><div className="help"><span className="help-dot">?</span><div><b>Need a hand?</b><small>Ask your administrator</small></div></div>
-        <button className="profile" onClick={logout}><div className="avatar">{user.username.slice(0, 1).toUpperCase()}</div><div><b>{user.username}</b><small>{titleCase(user.role)}</small></div><LogOut size={16}/></button>
+        <button className="profile" onClick={() => navigateTo('Account settings')}><div className="avatar">{user.username.slice(0, 1).toUpperCase()}</div><div><b>{user.username}</b><small>Account settings</small></div><Settings size={16}/></button>
       </div>
     </aside>
     <main className="content">
-      <header><div className="crumb">Workspace <span>/</span> {page}</div><div className="head-right"><span className="date"><CalendarDays size={15}/>{new Date().toLocaleDateString('en-KE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span><ThemeSelect theme={theme} icon={ThemeIcon} onChange={selectTheme}/><div className="avatar small">{user.username.slice(0, 1).toUpperCase()}</div></div></header>
+      <header><div className="crumb">Workspace <span>/</span> {page}</div><div className="head-right"><span className="date"><CalendarDays size={15}/>{new Date().toLocaleDateString('en-KE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span><ThemeSelect theme={theme} icon={ThemeIcon} onChange={selectTheme}/><button className="account-avatar-button" onClick={() => navigateTo('Account settings')} aria-label="Open account settings"><span className="avatar small">{user.username.slice(0, 1).toUpperCase()}</span></button></div></header>
       <section className="page-head"><div><span className="eyebrow">{titleCase(user.role)} WORKSPACE</span><h1>{page === 'Overview' ? `Welcome back, ${user.username}` : page === 'Customer profile' ? (data?.customer?.full_name || 'Customer profile') : page}<span className="wave"> ✦</span></h1><p>{pageDescription(page, user.role)}</p></div>
         <div className="head-actions">{page === 'Customer profile' && <><button className="secondary" onClick={() => { setSelectedCustomer(null); setPage('Customers'); }}>Back to customers</button>{['admin','manager','branch_manager','loan_officer','collections_officer','accountant'].includes(user.role)&&<button className="primary" onClick={()=>setModal('Interaction')}><Plus size={17}/> Add interaction</button>}</>}{['Customers','Products','Loans','Repayments','Team'].includes(page) && canCreate(page, user.role) && <button className="primary" onClick={() => setModal(page)}><Plus size={17}/> New {actionName}</button>}{['Reports','Loans','Customers','Repayments'].includes(page) && <button className="secondary" onClick={exportLoans}><Download size={16}/> Export CSV</button>}</div>
       </section>
@@ -271,7 +288,8 @@ function App() {
       {page === 'Team' && <div className="team-note"><ShieldCheck size={19}/><div><b>{isAdmin ? 'Build your branch team' : 'Managers can build their branch team'}</b><span>{isAdmin ? 'Add managers, loan officers, and collections officers.' : 'Add loan officers and collections officers for your branch.'} New team members must change their temporary password at first sign-in.</span></div></div>}
       {page === 'Overview' && <Dashboard summary={summary} loans={overviewLoans} role={user.role} onPage={setPage} onStatus={updateLoanStatus}/>}
       {page === 'Customer profile' && data?.customer && <CustomerProfile profile={data} role={user.role} token={token} canUpload={canCreate('Customers',user.role)} onUpload={uploadCustomerDocument}/>}
-      {page !== 'Overview' && page !== 'Customer profile' && <section className="panel list-panel">
+      {page === 'Account settings' && <AccountSettings user={user} theme={theme} onThemeChange={selectTheme} onPasswordChange={changePassword} onLogout={logout}/>}
+      {page !== 'Overview' && page !== 'Customer profile' && page !== 'Account settings' && <section className="panel list-panel">
         <div className="panel-head"><div><h2>{page === 'Team' ? 'People and access' : page}</h2><p>{pageDescription(page, user.role)}</p></div>
           {['Customers','Loans','Repayments'].includes(page) && <div className="table-tools"><div className="search"><Search size={15}/><input value={search} onChange={e => setSearch(e.target.value)} placeholder={`Search ${page.toLowerCase()}`}/></div></div>}
         </div>
@@ -289,7 +307,7 @@ function App() {
 }
 
 function pageDescription(page, role) {
-  return ({ Overview: 'A live view of your branch portfolio and today’s priorities.', Customers: 'Customer profiles and KYC records from your organization.', 'Customer profile': 'A complete view of the customer relationship and account history.', Products: 'Configure pricing, repayment frequency, and product rules.', Loans: 'Review applications, appraise requests, and move approved loans forward.', Repayments: 'Post and reconcile customer payments.', Collections: 'Work arrears, assign follow-ups, and record every customer contact.', Reports: 'Portfolio performance based on posted transactions.', Team: ['manager','branch_manager'].includes(role) ? 'Build your branch team by adding loan and collections officers.' : 'Manage branch access for managers, loan officers, and collections officers.' })[page] || `${titleCase(role)} operations`;
+  return ({ Overview: 'A live view of your branch portfolio and today’s priorities.', Customers: 'Customer profiles and KYC records from your organization.', 'Customer profile': 'A complete view of the customer relationship and account history.', Products: 'Configure pricing, repayment frequency, and product rules.', Loans: 'Review applications, appraise requests, and move approved loans forward.', Repayments: 'Post and reconcile customer payments.', Collections: 'Work arrears, assign follow-ups, and record every customer contact.', Reports: 'Portfolio performance based on posted transactions.', Team: ['manager','branch_manager'].includes(role) ? 'Build your branch team by adding loan and collections officers.' : 'Manage branch access for managers, loan officers, and collections officers.', 'Account settings': 'Manage your profile, display preferences, and password security.' })[page] || `${titleCase(role)} operations`;
 }
 function canCreate(page, role) {
   if (page === 'Team') return ['admin','manager','branch_manager'].includes(role);
@@ -304,14 +322,34 @@ function ThemeSelect({theme,icon:Icon,onChange}) {
   return <label className="theme-control"><Icon size={16}/><span className="visually-hidden">Color theme</span><select aria-label="Color theme" value={theme} onChange={event=>onChange(event.target.value)}><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select><ChevronDown size={14}/></label>;
 }
 
+function AccountSettings({user,theme,onThemeChange,onPasswordChange,onLogout}) {
+  const ThemeIcon = theme === 'system' ? Monitor : theme === 'dark' ? Moon : Sun;
+  const formatDate = value => value ? new Date(value).toLocaleDateString('en-KE',{day:'numeric',month:'long',year:'numeric'}) : 'Not available';
+  return <div className="account-settings-grid">
+    <section className="panel account-summary">
+      <span className="eyebrow">YOUR ACCOUNT</span>
+      <div className="account-identity"><div className="avatar account-avatar">{user.username.slice(0,1).toUpperCase()}</div><div><h2>{user.username}</h2><span>{titleCase(user.role)}</span></div></div>
+      <dl className="account-details"><div><dt>Username</dt><dd>{user.username}</dd></div><div><dt>Role</dt><dd>{titleCase(user.role)}</dd></div><div><dt>Branch</dt><dd>Nanyuki Branch</dd></div><div><dt>Password last changed</dt><dd>{formatDate(user.password_changed_at)}</dd></div><div><dt>Next password change</dt><dd>{formatDate(user.password_expires_at)}</dd></div></dl>
+      <button type="button" className="secondary account-logout" onClick={onLogout}><LogOut size={16}/> Sign out</button>
+    </section>
+    <div className="account-settings-panels">
+      <section className="panel account-preferences"><div className="panel-head"><div><h2>Appearance</h2><p>Choose how MWANGAZABIz looks on this device.</p></div></div><div className="preference-row"><div><b>Color theme</b><small>System follows your device setting.</small></div><ThemeSelect theme={theme} icon={ThemeIcon} onChange={onThemeChange}/></div></section>
+      <section className="panel account-password"><div className="panel-head"><div><h2>Password and security</h2><p>For your security, change your password every 30 days.</p></div></div>
+        <div className="password-status"><ShieldCheck size={18}/><span>{user.password_expired ? 'Your password has expired. Change it to continue.' : `Password changes are required every 30 days${user.password_expires_at ? ` · next change by ${formatDate(user.password_expires_at)}` : ''}.`}</span></div>
+        <form className="account-password-form" onSubmit={onPasswordChange}><label>Current password<input name="old_password" type="password" autoComplete="current-password" required/></label><label>New password<input name="new_password" type="password" minLength="12" maxLength="128" autoComplete="new-password" required/><small>Use at least 12 characters.</small></label><label>Confirm new password<input name="confirm_password" type="password" minLength="12" maxLength="128" autoComplete="new-password" required/></label><button className="primary"><ShieldCheck size={16}/> Update password</button></form>
+      </section>
+    </div>
+  </div>;
+}
+
 function Login({ onSubmit, loading, error, theme, onThemeChange }) {
   const ThemeIcon = theme === 'system' ? Monitor : theme === 'dark' ? Moon : Sun;
   return <main className="login"><div className="login-auth"><div className="auth-top"><div className="auth-brand"><span className="brand-mark">M</span><span>MWANGAZA<span>BIz</span></span></div><ThemeSelect theme={theme} icon={ThemeIcon} onChange={onThemeChange}/></div><div className="login-card"><span className="eyebrow">MWANGAZABIz FINANCE</span><h1>Good lending starts with clarity.</h1><p>Sign in to your lending operations workspace.</p><form onSubmit={onSubmit}><label>Username<input name="username" autoComplete="username" required placeholder="Your username"/></label><label>Password<input name="password" type="password" autoComplete="current-password" required placeholder="Your password"/></label>{error && <div className="error">{error}</div>}<button className="primary wide" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</button></form><small className="auth-branch"><MapPin size={14}/> Nanyuki Branch</small></div><small className="auth-foot">Secure lending operations · Kenya</small></div><div className="login-art"><div className="art-copy"><span>GROW WITH PURPOSE</span><h2>Every business<br/>has a bright future.</h2><p>Simple, transparent credit for Kenyan entrepreneurs.</p><div className="art-rule"/><span className="art-caption">A clearer view of every customer relationship.</span></div></div></main>;
 }
 
-function PasswordChange({username,error,onSubmit,theme,onThemeChange}) {
+function PasswordChange({username,expired,error,onSubmit,theme,onThemeChange}) {
   const ThemeIcon = theme === 'system' ? Monitor : theme === 'dark' ? Moon : Sun;
-  return <main className="login password-screen"><div className="login-auth"><div className="auth-top"><div className="auth-brand"><span className="brand-mark">M</span><span>MWANGAZA<span>BIz</span></span></div><ThemeSelect theme={theme} icon={ThemeIcon} onChange={onThemeChange}/></div><div className="login-card"><span className="eyebrow">FIRST-SIGN-IN SECURITY</span><h1>Set a new password</h1><p>Your administrator gave you a temporary password. Change it to continue to MWANGAZABIz.</p><form onSubmit={onSubmit}><label>Current temporary password<input name="old_password" type="password" autoComplete="current-password" required/></label><label>New password<input name="new_password" type="password" minLength="12" autoComplete="new-password" required/><small>Use at least 12 characters.</small></label><label>Confirm new password<input name="confirm_password" type="password" minLength="12" autoComplete="new-password" required/></label>{error&&<div className="error">{error}</div>}<button className="primary wide">Change password and continue</button></form><small>Signed in as {username}</small></div><small className="auth-foot">Secure lending operations · Kenya</small></div><div className="login-art"><div className="art-copy"><span>SECURE ACCESS</span><h2>Your work.<br/>Your account.</h2><p>Personalize your sign-in before viewing customer records.</p></div></div></main>;
+  return <main className="login password-screen"><div className="login-auth"><div className="auth-top"><div className="auth-brand"><span className="brand-mark">M</span><span>MWANGAZA<span>BIz</span></span></div><ThemeSelect theme={theme} icon={ThemeIcon} onChange={onThemeChange}/></div><div className="login-card"><span className="eyebrow">{expired?'PASSWORD SECURITY':'FIRST-SIGN-IN SECURITY'}</span><h1>Set a new password</h1><p>{expired?'Your password is 30 days old. Change it to continue to MWANGAZABIz.':'Your administrator gave you a temporary password. Change it to continue to MWANGAZABIz.'}</p><form onSubmit={onSubmit}><label>Current password<input name="old_password" type="password" autoComplete="current-password" required/></label><label>New password<input name="new_password" type="password" minLength="12" maxLength="128" autoComplete="new-password" required/><small>Use at least 12 characters.</small></label><label>Confirm new password<input name="confirm_password" type="password" minLength="12" maxLength="128" autoComplete="new-password" required/></label>{error&&<div className="error">{error}</div>}<button className="primary wide">Change password and continue</button></form><small>Signed in as {username}</small></div><small className="auth-foot">Secure lending operations · Kenya</small></div><div className="login-art"><div className="art-copy"><span>SECURE ACCESS</span><h2>Your work.<br/>Your account.</h2><p>Personalize your sign-in before viewing customer records.</p></div></div></main>;
 }
 
 function Dashboard({ summary, loans, role, onPage, onStatus }) {
