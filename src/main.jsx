@@ -256,6 +256,8 @@ function App() {
     localStorage.setItem('mwangazabiz-theme-preference', nextTheme);
     if (user?.id) localStorage.setItem(`mwangazabiz-theme-${user.id}`, nextTheme);
   }
+  const effectiveTheme = theme === 'system' ? systemTheme : theme;
+  function toggleTheme() { selectTheme(effectiveTheme === 'dark' ? 'light' : 'dark'); }
   function navigateTo(target) { setSearch(''); setSelectedCustomer(null); setPage(target); }
 
   if (!user) return <Login onSubmit={signIn} loading={loading} error={error} theme={theme} onThemeChange={selectTheme} />;
@@ -265,14 +267,13 @@ function App() {
   const visibleNav = nav.filter(([name]) => name !== 'Team' || canManageTeam);
   const isNavActive = name => page === name || (page === 'Customer profile' && name === 'Customers');
   const actionName = { Customers: 'customer', Products: 'product', Loans: 'loan', Repayments: 'repayment', Team: 'team member' }[page];
-  const ThemeIcon = theme === 'system' ? Monitor : theme === 'dark' ? Moon : Sun;
   return <div className="shell">
     <div className="mobile-navigation">
       <div className="mobile-nav-top">
         <div className="mobile-brand"><div className="brand-mark">M</div><div><b>MWANGAZABIz</b><small>LENDING WORKSPACE</small></div></div>
         <div className="mobile-nav-actions">
           <span className="mobile-branch"><MapPin size={14}/><span>Nanyuki Branch</span></span>
-          <button className="mobile-logout" onClick={() => navigateTo('Account settings')} aria-label={`Open account settings for ${user.username}`} title="Account settings"><span className="avatar">{user.username.slice(0, 1).toUpperCase()}</span><Settings size={15}/></button>
+          <ThemeToggle theme={effectiveTheme} onToggle={toggleTheme}/><button className="mobile-logout" onClick={logout} aria-label="Sign out" title="Sign out"><LogOut size={17}/></button>
         </div>
       </div>
       <nav className="mobile-nav-links" aria-label="Primary navigation">
@@ -289,7 +290,7 @@ function App() {
       </div>
     </aside>
     <main className="content">
-      <header><div className="crumb">Workspace <span>/</span> {page}</div><div className="head-right"><span className="date"><CalendarDays size={15}/>{new Date().toLocaleDateString('en-KE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span><ThemeSelect theme={theme} icon={ThemeIcon} onChange={selectTheme}/><button className="account-avatar-button" onClick={() => navigateTo('Account settings')} aria-label="Open account settings"><span className="avatar small">{user.username.slice(0, 1).toUpperCase()}</span></button></div></header>
+      <header><div className="crumb">Workspace <span>/</span> {page}</div><div className="head-right"><span className="date"><CalendarDays size={15}/>{new Date().toLocaleDateString('en-KE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span><ThemeToggle theme={effectiveTheme} onToggle={toggleTheme}/><button className="header-logout" onClick={logout} aria-label="Sign out" title="Sign out"><LogOut size={16}/><span>Sign out</span></button></div></header>
       <section className="page-head"><div><span className="eyebrow">{titleCase(user.role)} WORKSPACE</span><h1>{page === 'Overview' ? `Welcome back, ${user.username}` : page === 'Customer profile' ? (data?.customer?.full_name || 'Customer profile') : page}<span className="wave"> ✦</span></h1><p>{pageDescription(page, user.role)}</p></div>
         <div className="head-actions">{page === 'Customer profile' && <><button className="secondary" onClick={() => { setSelectedCustomer(null); setPage('Customers'); }}>Back to customers</button>{['admin','manager','branch_manager','loan_officer','collections_officer','accountant'].includes(user.role)&&<button className="primary" onClick={()=>setModal('Interaction')}><Plus size={17}/> Add interaction</button>}</>}{['Customers','Products','Loans','Repayments','Team'].includes(page) && canCreate(page, user.role) && <button className="primary" onClick={() => setModal(page)}><Plus size={17}/> New {actionName}</button>}{['Reports','Loans','Customers','Repayments'].includes(page) && <button className="secondary" onClick={exportLoans}><Download size={16}/> Export CSV</button>}</div>
       </section>
@@ -330,6 +331,11 @@ function canCreate(page, role) {
 
 function ThemeSelect({theme,icon:Icon,onChange}) {
   return <label className="theme-control"><Icon size={16}/><span className="visually-hidden">Color theme</span><select aria-label="Color theme" value={theme} onChange={event=>onChange(event.target.value)}><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select><ChevronDown size={14}/></label>;
+}
+function ThemeToggle({theme,onToggle}) {
+  const Icon = theme === 'dark' ? Sun : Moon;
+  const nextTheme = theme === 'dark' ? 'light' : 'dark';
+  return <button type="button" className="theme-toggle header-icon-button" onClick={onToggle} aria-label={'Switch to ' + nextTheme + ' mode'} title={'Switch to ' + nextTheme + ' mode'}><Icon size={17}/></button>;
 }
 
 function AccountSettings({user,theme,onThemeChange,onPasswordChange,onLogout}) {
