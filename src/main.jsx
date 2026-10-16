@@ -30,7 +30,10 @@ async function api(path, token, options = {}) {
 function App() {
   const [token, setToken] = useState('');
   const [user, setUser] = useState(null);
-  const [theme, setTheme] = useState('system');
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('mwangazabiz-theme-preference');
+    return ['system', 'light', 'dark'].includes(saved) ? saved : 'system';
+  });
   const [systemTheme, setSystemTheme] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ? 'dark' : 'light');
   const [page, setPage] = useState('Overview');
   const [data, setData] = useState(null);
@@ -75,7 +78,9 @@ function App() {
     return () => media.removeEventListener?.('change', update);
   }, []);
   useEffect(() => {
-    const savedTheme = user?.id ? localStorage.getItem(`mwangazabiz-theme-${user.id}`) || 'system' : 'system';
+    const savedTheme = user?.id
+      ? localStorage.getItem(`mwangazabiz-theme-${user.id}`) || localStorage.getItem('mwangazabiz-theme-preference') || 'system'
+      : localStorage.getItem('mwangazabiz-theme-preference') || 'system';
     setTheme(['system', 'light', 'dark'].includes(savedTheme) ? savedTheme : 'system');
   }, [user?.id]);
   useEffect(() => {
@@ -219,22 +224,21 @@ function App() {
     try { setActivities(await api(`/collections/${loanId}/activities`, token)); } catch (e) { setError(e.message); }
   }
   function logout() { localStorage.removeItem('token'); setToken(''); setUser(null); setData(null); setPage('Overview'); }
-  function toggleTheme() {
-    const nextTheme = theme === 'system' ? 'dark' : theme === 'dark' ? 'light' : 'system';
+  function selectTheme(nextTheme) {
     setTheme(nextTheme);
+    localStorage.setItem('mwangazabiz-theme-preference', nextTheme);
     if (user?.id) localStorage.setItem(`mwangazabiz-theme-${user.id}`, nextTheme);
   }
   function navigateTo(target) { setSearch(''); setSelectedCustomer(null); setPage(target); }
 
-  if (!user) return <Login onSubmit={signIn} loading={loading} error={error} />;
-  if (user.must_change_password) return <PasswordChange username={user.username} error={error} onSubmit={changePassword}/>;
+  if (!user) return <Login onSubmit={signIn} loading={loading} error={error} theme={theme} onThemeChange={selectTheme} />;
+  if (user.must_change_password) return <PasswordChange username={user.username} error={error} onSubmit={changePassword} theme={theme} onThemeChange={selectTheme}/>;
   const rows = data?.items || [];
   const summary = data || {};
   const visibleNav = nav.filter(([name]) => name !== 'Team' || canManageTeam);
   const isNavActive = name => page === name || (page === 'Customer profile' && name === 'Customers');
   const actionName = { Customers: 'customer', Products: 'product', Loans: 'loan', Repayments: 'repayment', Team: 'team member' }[page];
   const ThemeIcon = theme === 'system' ? Monitor : theme === 'dark' ? Moon : Sun;
-  const themeLabel = theme === 'system' ? 'Auto' : theme === 'dark' ? 'Dark' : 'Light';
   return <div className="shell">
     <div className="mobile-navigation">
       <div className="mobile-nav-top">
@@ -258,7 +262,7 @@ function App() {
       </div>
     </aside>
     <main className="content">
-      <header><div className="crumb">Workspace <span>/</span> {page}</div><div className="head-right"><span className="date"><CalendarDays size={15}/>{new Date().toLocaleDateString('en-KE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span><button type="button" className="theme-toggle" onClick={toggleTheme} aria-label={`Theme: ${themeLabel}. Click to change.`} aria-pressed={theme === 'dark'} title={`Theme: ${themeLabel}. Click to change.`}><ThemeIcon size={16}/><span>{themeLabel}</span></button><div className="avatar small">{user.username.slice(0, 1).toUpperCase()}</div></div></header>
+      <header><div className="crumb">Workspace <span>/</span> {page}</div><div className="head-right"><span className="date"><CalendarDays size={15}/>{new Date().toLocaleDateString('en-KE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span><ThemeSelect theme={theme} icon={ThemeIcon} onChange={selectTheme}/><div className="avatar small">{user.username.slice(0, 1).toUpperCase()}</div></div></header>
       <section className="page-head"><div><span className="eyebrow">{titleCase(user.role)} WORKSPACE</span><h1>{page === 'Overview' ? `Welcome back, ${user.username}` : page === 'Customer profile' ? (data?.customer?.full_name || 'Customer profile') : page}<span className="wave"> ✦</span></h1><p>{pageDescription(page, user.role)}</p></div>
         <div className="head-actions">{page === 'Customer profile' && <><button className="secondary" onClick={() => { setSelectedCustomer(null); setPage('Customers'); }}>Back to customers</button>{['admin','manager','branch_manager','loan_officer','collections_officer','accountant'].includes(user.role)&&<button className="primary" onClick={()=>setModal('Interaction')}><Plus size={17}/> Add interaction</button>}</>}{['Customers','Products','Loans','Repayments','Team'].includes(page) && canCreate(page, user.role) && <button className="primary" onClick={() => setModal(page)}><Plus size={17}/> New {actionName}</button>}{['Reports','Loans','Customers','Repayments'].includes(page) && <button className="secondary" onClick={exportLoans}><Download size={16}/> Export CSV</button>}</div>
       </section>
@@ -296,17 +300,24 @@ function canCreate(page, role) {
   return false;
 }
 
-function Login({ onSubmit, loading, error }) {
-  return <main className="login"><div className="login-card"><div className="brand-mark">M</div><span className="eyebrow">MWANGAZABIz FINANCE</span><h1>Good lending starts with clarity.</h1><p>Sign in to your lending operations workspace.</p><form onSubmit={onSubmit}><label>Username<input name="username" autoComplete="username" required placeholder="Your username"/></label><label>Password<input name="password" type="password" autoComplete="current-password" required placeholder="Your password"/></label>{error && <div className="error">{error}</div>}<button className="primary wide" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</button></form></div><div className="login-art"><div className="sun"/><div className="art-copy"><span>GROW WITH PURPOSE</span><h2>Every business<br/>has a bright future.</h2><p>Simple, transparent credit for Kenyan entrepreneurs.</p></div><div className="art-hills"/></div></main>;
+function ThemeSelect({theme,icon:Icon,onChange}) {
+  return <label className="theme-control"><Icon size={16}/><span className="visually-hidden">Color theme</span><select aria-label="Color theme" value={theme} onChange={event=>onChange(event.target.value)}><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select><ChevronDown size={14}/></label>;
 }
 
-function PasswordChange({username,error,onSubmit}) {
-  return <main className="login password-screen"><div className="login-card"><div className="brand-mark">M</div><span className="eyebrow">FIRST SIGN-IN SECURITY</span><h1>Set a new password</h1><p>Your administrator gave you a temporary password. Change it to continue to MWANGAZABIz.</p><form onSubmit={onSubmit}><label>Current temporary password<input name="old_password" type="password" autoComplete="current-password" required/></label><label>New password<input name="new_password" type="password" minLength="12" autoComplete="new-password" required/><small>Use at least 12 characters.</small></label><label>Confirm new password<input name="confirm_password" type="password" minLength="12" autoComplete="new-password" required/></label>{error&&<div className="error">{error}</div>}<button className="primary wide">Change password and continue</button></form><small>Signed in as {username}</small></div><div className="login-art"><div className="sun"/><div className="art-copy"><span>SECURE ACCESS</span><h2>Your work.<br/>Your account.</h2><p>Personalize your sign-in before viewing customer records.</p></div><div className="art-hills"/></div></main>;
+function Login({ onSubmit, loading, error, theme, onThemeChange }) {
+  const ThemeIcon = theme === 'system' ? Monitor : theme === 'dark' ? Moon : Sun;
+  return <main className="login"><div className="login-auth"><div className="auth-top"><div className="auth-brand"><span className="brand-mark">M</span><span>MWANGAZA<span>BIz</span></span></div><ThemeSelect theme={theme} icon={ThemeIcon} onChange={onThemeChange}/></div><div className="login-card"><span className="eyebrow">MWANGAZABIz FINANCE</span><h1>Good lending starts with clarity.</h1><p>Sign in to your lending operations workspace.</p><form onSubmit={onSubmit}><label>Username<input name="username" autoComplete="username" required placeholder="Your username"/></label><label>Password<input name="password" type="password" autoComplete="current-password" required placeholder="Your password"/></label>{error && <div className="error">{error}</div>}<button className="primary wide" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</button></form><small className="auth-branch"><MapPin size={14}/> Nanyuki Branch</small></div><small className="auth-foot">Secure lending operations · Kenya</small></div><div className="login-art"><div className="art-copy"><span>GROW WITH PURPOSE</span><h2>Every business<br/>has a bright future.</h2><p>Simple, transparent credit for Kenyan entrepreneurs.</p><div className="art-rule"/><span className="art-caption">A clearer view of every customer relationship.</span></div></div></main>;
+}
+
+function PasswordChange({username,error,onSubmit,theme,onThemeChange}) {
+  const ThemeIcon = theme === 'system' ? Monitor : theme === 'dark' ? Moon : Sun;
+  return <main className="login password-screen"><div className="login-auth"><div className="auth-top"><div className="auth-brand"><span className="brand-mark">M</span><span>MWANGAZA<span>BIz</span></span></div><ThemeSelect theme={theme} icon={ThemeIcon} onChange={onThemeChange}/></div><div className="login-card"><span className="eyebrow">FIRST-SIGN-IN SECURITY</span><h1>Set a new password</h1><p>Your administrator gave you a temporary password. Change it to continue to MWANGAZABIz.</p><form onSubmit={onSubmit}><label>Current temporary password<input name="old_password" type="password" autoComplete="current-password" required/></label><label>New password<input name="new_password" type="password" minLength="12" autoComplete="new-password" required/><small>Use at least 12 characters.</small></label><label>Confirm new password<input name="confirm_password" type="password" minLength="12" autoComplete="new-password" required/></label>{error&&<div className="error">{error}</div>}<button className="primary wide">Change password and continue</button></form><small>Signed in as {username}</small></div><small className="auth-foot">Secure lending operations · Kenya</small></div><div className="login-art"><div className="art-copy"><span>SECURE ACCESS</span><h2>Your work.<br/>Your account.</h2><p>Personalize your sign-in before viewing customer records.</p></div></div></main>;
 }
 
 function Dashboard({ summary, loans, role, onPage, onStatus }) {
   const collectedRate = `${(Number(summary.collection_rate || 0) * 100).toFixed(1)}%`;
-  return <><div className="stats"><Metric label="Portfolio outstanding" value={KES(summary.portfolio_outstanding_cents)} change="Current ledger balance" icon={<CircleDollarSign/>} tint="green"/><Metric label="Total disbursed" value={KES(summary.disbursed_cents)} change={`${summary.active_loans || 0} active loans`} icon={<ArrowUpRight/>} tint="blue"/><Metric label="Total collected" value={KES(summary.collected_cents)} change={`${collectedRate} collection rate`} icon={<Check/>} tint="gold"/><Metric label="Portfolio at risk" value={KES(summary.par_cents)} change={`${summary.overdue_installments || 0} overdue installments`} icon={<Activity/>} tint="red"/></div>
+  return <><section className="portfolio-hero"><div className="hero-main"><span>OUTSTANDING PORTFOLIO</span><h2>{KES(summary.portfolio_outstanding_cents)}</h2><small>Current ledger balance</small></div><div className="hero-side"><span className="hero-mark"><WalletCards size={22}/></span><span>BRANCH PORTFOLIO</span></div><div className="hero-foot"><div><span>Total collected</span><b>{KES(summary.collected_cents)}</b></div><div><span>Collection rate</span><b>{collectedRate}</b></div></div></section>
+    <div className="stats"><Metric label="Total disbursed" value={KES(summary.disbursed_cents)} change={`${summary.active_loans || 0} active loans`} icon={<ArrowUpRight/>} tint="neutral"/><Metric label="Collected" value={KES(summary.collected_cents)} change={`${collectedRate} collection rate`} icon={<Check/>} tint="healthy"/><Metric label="Overdue installments" value={summary.overdue_installments || 0} change={`${KES(summary.par_cents)} portfolio at risk`} icon={<Activity/>} tint="overdue"/><Metric label="Payments for review" value={summary.pending_payments || 0} change="Awaiting manager confirmation" icon={<CircleDollarSign/>} tint="neutral"/></div>
     <div className="dashboard-grid"><section className="panel portfolio"><div className="panel-head"><div><h2>Portfolio snapshot</h2><p>Disbursed funds compared with collections</p></div><button className="text-btn" onClick={() => onPage('Reports')}>View reports <ArrowUpRight size={15}/></button></div><div className="compare-bars"><CompareBar label="Disbursed" cents={summary.disbursed_cents} max={Math.max(summary.disbursed_cents || 0, summary.collected_cents || 0, 1)} tint="primary-bar"/><CompareBar label="Collected" cents={summary.collected_cents} max={Math.max(summary.disbursed_cents || 0, summary.collected_cents || 0, 1)} tint="secondary-bar"/><div className="snapshot-note"><span>Outstanding</span><b>{KES(summary.portfolio_outstanding_cents)}</b><small>Balances derived from the loan ledger</small></div></div></section>
       <section className="panel quick"><div className="panel-head"><div><h2>Today’s priorities</h2><p>Open work queues</p></div></div><Action icon={<PhoneCall size={16}/>} title="Collections queue" subtitle={`${summary.overdue_installments || 0} overdue installments`} amount="Open" onClick={() => onPage('Collections')}/><Action icon={<HandCoins size={16}/>} title="Loan applications" subtitle="Review and advance applications" amount="Open" onClick={() => onPage('Loans')}/><Action icon={<WalletCards size={16}/>} title="Record repayment" subtitle={role==='manager'||role==='admin'?`${summary.pending_payments||0} awaiting manager review`:"Post a cash, M-Pesa, or bank payment"} amount="Open" onClick={() => onPage('Repayments')}/></section>
       <section className="panel recent"><div className="panel-head"><div><h2>Latest loans</h2><p>Applications and account status</p></div><button className="text-btn" onClick={() => onPage('Loans')}>All loans <ArrowUpRight size={15}/></button></div><LoanTable rows={loans.slice(0,5)} role={role} onStatus={onStatus}/></section>
