@@ -53,7 +53,7 @@ function App() {
   const loadPage = useCallback(async (target = page, query = '') => {
     if (!token) return;
     const routes = {
-      Overview: '/reports/summary', Customers: `/customers?page=1&limit=100${query ? `&q=${encodeURIComponent(query)}` : ''}`,
+      Overview: '/reports/summary', Customers: `/customers?page=1&limit=500${query ? `&q=${encodeURIComponent(query)}` : ''}`,
       Products: '/products', Loans: '/loans?page=1&limit=100', Repayments: '/payments?page=1&limit=100',
       Collections: '/collections/queue', Reports: '/reports/summary', Team: '/users',
       'Customer profile': `/customers/${selectedCustomer}/profile`
@@ -129,7 +129,7 @@ function App() {
     if (!token) return;
     if (['Loans', 'Overview'].includes(page)) api('/products', token).then(setProducts).catch(() => {});
     if (page === 'Overview') api('/loans?page=1&limit=5', token).then(r => setOverviewLoans(r.items || [])).catch(() => {});
-    if (page === 'Loans') api('/customers?page=1&limit=100', token).then(r => setCustomers(r.items || [])).catch(() => {});
+    if (page === 'Loans') api('/customers?page=1&limit=500', token).then(r => setCustomers(r.items || [])).catch(() => {});
     if (page === 'Repayments') api('/loans?page=1&limit=100', token).then(r => setLoanChoices(r.items || [])).catch(() => {});
     if (['Collections', 'Overview'].includes(page) && ['admin', 'manager', 'branch_manager', 'collections_officer'].includes(user?.role))
       api('/collections/officers', token).then(setOfficers).catch(() => {});
